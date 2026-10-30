@@ -22,6 +22,9 @@ export type StrokeResult = { ok: true; id: string } | { ok: false; message: stri
 /** Drawn longer than this (m), an Auto board is a longboard. */
 const LONG_FROM = (BOARD_LENGTH.short + BOARD_LENGTH.long) / 2 * SURFER_SCALE * 1.05;
 
+/** Shortest stroke (px) that makes a surfer. */
+const MIN_STROKE = 40;
+
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
@@ -78,8 +81,9 @@ export class SurfApp {
 
   /** Any short stroke or loop becomes a surfer facing the way it was drawn. */
   createFromStroke(points: readonly Pt[]): StrokeResult {
+    // a quick straight stroke is the whole gesture here, so only its length matters
     const a = analyzeStroke(points);
-    if (!a.valid) return { ok: false, message: 'Draw a little longer — a quick stroke will do.' };
+    if (a.length < MIN_STROKE || Math.max(a.bbox.width, a.bbox.height) < MIN_STROKE * 0.7) return { ok: false, message: 'Draw a little longer — a quick stroke will do.' };
     if (this.store.doc.surfers.length >= MAX_SURFERS) return { ok: false, message: 'The line-up is full. Send someone in to make room.' };
     const reading = readStroke(points);
     const c = this.toWater(reading.centre.x, reading.centre.y);

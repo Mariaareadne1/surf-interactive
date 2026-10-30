@@ -18,11 +18,13 @@ export function createCamera(): THREE.PerspectiveCamera {
   return camera;
 }
 
-const CORNERS = [
-  new THREE.Vector3(-PLAY.halfX, 0, -PLAY.halfZ),
-  new THREE.Vector3(PLAY.halfX, 0, -PLAY.halfZ),
-  new THREE.Vector3(-PLAY.halfX, 0, PLAY.halfZ),
-  new THREE.Vector3(PLAY.halfX, 0, PLAY.halfZ),
+/** On tall screens, a taller, narrower stretch of sea, so surfers stay the size they are on a laptop. */
+const PLAY_TALL = { halfX: 7.5, halfZ: 16 };
+const corners = (area: { halfX: number; halfZ: number }) => [
+  new THREE.Vector3(-area.halfX, 0, -area.halfZ),
+  new THREE.Vector3(area.halfX, 0, -area.halfZ),
+  new THREE.Vector3(-area.halfX, 0, area.halfZ),
+  new THREE.Vector3(area.halfX, 0, area.halfZ),
 ];
 const tmp = new THREE.Vector3();
 
@@ -35,9 +37,9 @@ function place(camera: THREE.PerspectiveCamera, distance: number): void {
 }
 
 /** Smallest |NDC| the play area's corners reach, per axis (≥ 1 means it covers the screen that way). */
-function cover(camera: THREE.PerspectiveCamera): { x: number; y: number } {
+function cover(camera: THREE.PerspectiveCamera, area: THREE.Vector3[]): { x: number; y: number } {
   let x = Infinity, y = Infinity;
-  for (const c of CORNERS) {
+  for (const c of area) {
     tmp.copy(c).project(camera);
     x = Math.min(x, Math.abs(tmp.x));
     y = Math.min(y, Math.abs(tmp.y));
@@ -57,12 +59,13 @@ export function frameCamera(camera: THREE.PerspectiveCamera, width: number, heig
   camera.fov = FOV;
   camera.updateProjectionMatrix();
   // the farthest camera at which the play area still covers the whole screen
+  const area = corners(camera.aspect < 1 ? PLAY_TALL : PLAY);
   let lo = 4;
   let hi = 200;
   for (let i = 0; i < 40; i++) {
     const mid = (lo + hi) / 2;
     place(camera, mid);
-    const c = cover(camera);
+    const c = cover(camera, area);
     if (c.x >= 1 && c.y >= 1) lo = mid;
     else hi = mid;
   }

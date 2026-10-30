@@ -217,6 +217,18 @@ export class WaveField {
     return best;
   }
 
+  /** The next wave coming toward (x, z): crest still ahead of the point, nearest first, breaking here or not. */
+  approaching(x: number, z: number, t: number): { wave: Wave; e: number; u: number } | null {
+    let best: { wave: Wave; e: number; u: number } | null = null;
+    for (const w of this.waves) {
+      if (wavePower(w, t) < 0.3) continue;
+      const u = across(x, z);
+      const e = along(x, z) - crestAt(w, u, t);
+      if (e > 0 && (!best || e < best.e)) best = { wave: w, e, u };
+    }
+    return best;
+  }
+
   /** The wave whose breaking white water is at (x, z) right now, if any (the biggest if several). */
   foamAt(x: number, z: number, t: number): Wave | null {
     let hit: Wave | null = null;

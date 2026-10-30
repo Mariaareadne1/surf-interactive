@@ -57,6 +57,7 @@ export class SurfManager {
     time: 0,
     sample: (x, z) => this.waves.sample(x, z, this.time),
     foamAt: (x, z) => this.waves.foamAt(x, z, this.time),
+    approaching: (x, z) => this.waves.approaching(x, z, this.time),
     ripple: (x, z, s) => this.ripples.add(x, z, s),
     splash: (x, z, s) => {
       // a burst of rings for the white water flung up

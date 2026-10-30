@@ -13,6 +13,8 @@ export interface SeaSense {
   sample(x: number, z: number): WaveSample | null;
   /** The wave whose white water is at (x, z) right now, if any. */
   foamAt(x: number, z: number): Wave | null;
+  /** The next wave coming, breaking here or not. */
+  approaching(x: number, z: number): { wave: Wave; e: number; u: number } | null;
   ripple(x: number, z: number, strength: number): void;
   splash(x: number, z: number, strength: number): void;
 }
@@ -52,6 +54,8 @@ export class SurferController extends Controller<SurfKey, SurfState> {
   private markSide = 1;
   /** A wave it just dived under or rode out of: that one has had its chance. */
   private escaped: Wave | null = null;
+  /** The last wave it made up its mind about while sitting (dive under it, or take it on the head). */
+  private decided: Wave | null = null;
 
   constructor(seed: number, x: number, z: number, heading: number) {
     super(SURF_KEYS, seed, x, z, heading, 'wait');
@@ -119,7 +123,8 @@ export class SurferController extends Controller<SurfKey, SurfState> {
 
   private startWipeout(wave: Wave | null, strength: number): void {
     const push = wave ? wave.speed : 0.8;
-    const lat = (this.rand() - 0.5) * 1.2;
+    // by itself (no wave), the board shoots out sideways from under them
+    const lat = wave ? (this.rand() - 0.5) * 1.2 : (this.rand() < 0.5 ? -1 : 1) * (1.4 + this.rand() * 0.6);
     this.wipe = {
       vx: WAVE_DIR[0] * push * 0.75 * strength,
       vz: WAVE_DIR[1] * push * 0.75 * strength,
@@ -212,12 +217,21 @@ export class SurferController extends Controller<SurfKey, SurfState> {
       case 'wait': {
         // face out to sea, drift a little with the swell
         this.speed *= 1 - Math.min(1, dt * 1.2);
-        this.turnAt(this.rateToward(OUT_HEADING, 0.35) * 0.6, dt, 0.6);
+        this.turnAt(this.rateToward(OUT_HEADING, 0.7) * 0.8, dt, 0.6);
         this.move((0.06 + this.speed) * dt * 0.5);
         if (foam) {
           this.startWipeout(s?.wave ?? null, 1);
           sense.splash(this.x, this.z, 0.8);
           break;
+        }
+        // white water about to arrive: most of the time, lie down and duck under it
+        if (s && !s.wave.big && s.power > 0.35 && s.e > 0 && s.e < 2.0 && this.decided !== s.wave) {
+          this.decided = s.wave;
+          if (!this.intentCatch && this.rand() < 0.6) {
+            this.escaped = s.wave;
+            this.enter('dive', 0.3);
+            break;
+          }
         }
         this.think -= dt;
         if (this.intentCatch) this.lookForWave(s);
@@ -256,12 +270,20 @@ export class SurferController extends Controller<SurfKey, SurfState> {
         if (this.stateTime >= DIVE.duration) this.enter(this.target ? 'paddle' : 'wait', 0.3);
         break;
       case 'catch': {
+        // line up where the next wave will break (across toward its peak), then
         // turn toward the beach and paddle hard as the face comes
-        const rate = this.rateToward(IN_HEADING, 1.6);
+        const next = sense.approaching(this.x, this.z);
+        let want = IN_HEADING;
+        if (next && Math.abs(next.u - next.wave.u0) > next.wave.halfLen * 0.55 && next.e > 2) {
+          const dir = Math.sign(next.wave.u0 - next.u);
+          want = Math.atan2(-(WAVE_DIR[0] * dir), -WAVE_DIR[1] * dir);
+        }
+        const rate = this.rateToward(want, 1.6);
         this.turnAt(rate + this.avoid(rate), dt);
         const near = s && s.e > 0 && s.e < 4;
-        const want = (near ? 1.3 : 0.25) * this.scale * 0.5;
-        this.speed += (want - this.speed) * Math.min(1, dt * 1.8);
+        const lining = want !== IN_HEADING;
+        const pace = (near ? 1.3 : lining ? 0.9 : 0.25) * this.scale * 0.5;
+        this.speed += (pace - this.speed) * Math.min(1, dt * 1.8);
         this.move(this.speed * dt);
         this.marks(dt, sense, 0.3, 0.35);
         if (s && s.power > 0.4 && s.e > -0.2 && s.e < s.faceWidth + 0.4 && Math.abs(wrapAngle(this.heading - IN_HEADING)) < 0.9) {
