@@ -42,7 +42,6 @@ export function Chrome({ app, onCapture, onRecord }: ChromeProps) {
   const count = useAppState(store, (s) => s.history.present.surfers.length);
   const toast = useAppState(store, (s) => s.toast);
   const recording = useAppState(store, (s) => s.recording);
-  const sound = useAppState(store, (s) => s.sound);
   const selectedId = useAppState(store, (s) => s.selectedId);
   const [panel, setPanel] = useState<'none' | 'help' | 'menu'>('none');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -67,7 +66,6 @@ export function Chrome({ app, onCapture, onRecord }: ChromeProps) {
     if (action === 'import') fileRef.current?.click();
     if (action === 'hide') store.set({ uiHidden: true });
     if (action === 'record') onRecord();
-    if (action === 'sound') store.set({ sound: !sound });
   };
 
   return (
@@ -101,7 +99,6 @@ export function Chrome({ app, onCapture, onRecord }: ChromeProps) {
           <button onClick={() => runMenu('showcase')}>Showcase arrangement</button>
           <button onClick={() => runMenu('record')} disabled={recording}>Record 12-second clip</button>
           <button onClick={() => runMenu('hide')}>Hide interface <kbd>H</kbd></button>
-          <button onClick={() => runMenu('sound')} aria-pressed={sound}>Sound <kbd>{sound ? 'on' : 'off'}</kbd></button>
           <hr />
           <button onClick={() => runMenu('export')}>Export scene…</button>
           <button onClick={() => runMenu('import')}>Import scene…</button>

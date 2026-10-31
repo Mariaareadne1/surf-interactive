@@ -15,7 +15,6 @@ export interface AppState {
   readonly drawBoard: DrawBoard;
   /** No new waves while calm. */
   readonly calm: boolean;
-  readonly sound: boolean;
   readonly hasDrawn: boolean;
   readonly uiHidden: boolean;
   readonly toast: { id: number; text: string } | null;
@@ -38,7 +37,6 @@ export class Store {
       tool: 'draw',
       drawBoard: 'auto',
       calm: false,
-      sound: false,
       hasDrawn: false,
       uiHidden: false,
       toast: null,

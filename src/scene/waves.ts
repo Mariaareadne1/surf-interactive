@@ -148,7 +148,8 @@ export class WaveField {
       uMin = Math.min(uMin, u);
       uMax = Math.max(uMax, u);
     }
-    return { from: from - 3, to: to + 4, uMin, uMax };
+    // start just off-screen: the wave fades in as it forms, so there is no long wait before it appears
+    return { from: from + 0.5, to: to + 4, uMin, uMax };
   }
 
   spawn(t: number, big = false): Wave {

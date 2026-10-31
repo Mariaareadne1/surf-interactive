@@ -8,8 +8,11 @@ test.describe('surf', () => {
     await openSea(page, 'showcase');
     await page.evaluate(() => {
       const p = window.__surf!;
-      p.engine.waves.spawn(p.engine.elapsed - 11);
+      // breaking all the way along, well inside the view
+      p.engine.waves.spawn(p.engine.elapsed - 6).halfLen = 99;
     });
+    // the wave reaches the shader on the next frame
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const s = await captureStats(page);
     expect(s.type).toBe('image/png');
     expect(s.mint).toBeGreaterThan(0.3);
